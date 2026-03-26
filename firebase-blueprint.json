@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Information about a user of the Cyberhound app.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique ID of the user." },
+        "displayName": { "type": "string", "description": "The display name of the user." },
+        "email": { "type": "string", "description": "The email address of the user." },
+        "photoURL": { "type": "string", "description": "The URL of the user's profile photo." },
+        "isPro": { "type": "boolean", "description": "Whether the user has a Pro subscription." },
+        "searchCount": { "type": "integer", "description": "Number of searches performed by the user." },
+        "lastSearchResetAt": { "type": "string", "format": "date-time", "description": "When the search count was last reset." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the profile was created." }
+      },
+      "required": ["uid", "email"]
+    },
+    "WatchlistDeal": {
+      "title": "WatchlistDeal",
+      "description": "A deal saved by a user to their watchlist.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID of the deal." },
+        "userId": { "type": "string", "description": "The UID of the user who saved the deal." },
+        "title": { "type": "string", "description": "The title of the deal." },
+        "description": { "type": "string", "description": "The description of the deal." },
+        "category": { "type": "string", "enum": ["Free Trial", "Discount", "Coupon", "Limited Time"] },
+        "link": { "type": "string", "description": "The URL of the deal." },
+        "source": { "type": "string", "description": "The source of the deal." },
+        "relevanceScore": { "type": "number", "description": "The relevance score of the deal." },
+        "savedAt": { "type": "string", "format": "date-time", "description": "When the deal was saved." }
+      },
+      "required": ["id", "userId", "title", "link"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profile documents."
+    },
+    "/users/{uid}/watchlist/{dealId}": {
+      "schema": "WatchlistDeal",
+      "description": "Deals saved to a user's watchlist."
+    }
+  }
+}
