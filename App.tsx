@@ -93,8 +93,12 @@ const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.uid, email: user.email }),
       });
-      const { url } = await response.json();
-      if (url) window.location.href = url;
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || 'Checkout is unavailable. Configure Stripe or try again later.');
+        return;
+      }
+      if (data.url) window.location.href = data.url;
     } catch (err) {
       console.error("Upgrade error:", err);
       setError("Payment system offline. Try again later.");
@@ -145,7 +149,9 @@ const App: React.FC = () => {
         searchCount: (currentSearchCount || 0) + 1
       });
     } catch (err) {
-      setError("The trail went cold... (API Error)");
+      setError(
+        err instanceof Error ? err.message : "The trail went cold... (API Error)",
+      );
       setMood(HoundMood.TIRED);
     } finally {
       setIsLoading(false);

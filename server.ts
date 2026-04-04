@@ -3,20 +3,23 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import Stripe from "stripe";
 import { fileURLToPath } from "url";
+import { config as loadEnv } from "dotenv";
+
+// Server-side env (Stripe, etc.). Vite still loads GEMINI_API_KEY via vite.config loadEnv for the client bundle.
+loadEnv({ path: ".env" });
+loadEnv({ path: ".env.local", override: true });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Lazy initialize Stripe
+// Lazy initialize Stripe (only when STRIPE_SECRET_KEY is set)
 let stripeClient: Stripe | null = null;
-function getStripe(): Stripe {
+function getStripe(): Stripe | null {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    return null;
+  }
   if (!stripeClient) {
-    const key = process.env.STRIPE_SECRET_KEY;
-    if (!key) {
-      // In a real app, we'd throw, but for demo we'll log
-      console.warn("STRIPE_SECRET_KEY is missing. Checkout will fail.");
-      return new Stripe("sk_test_placeholder");
-    }
     stripeClient = new Stripe(key);
   }
   return stripeClient;
@@ -38,7 +41,14 @@ async function startServer() {
     try {
       const { userId, email } = req.body;
       const stripe = getStripe();
-      
+      if (!stripe) {
+        console.warn("STRIPE_SECRET_KEY is missing; checkout disabled.");
+        return res.status(503).json({
+          error: "Stripe is not configured",
+          url: null,
+        });
+      }
+
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         line_items: [
@@ -72,6 +82,7 @@ async function startServer() {
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
+      root: path.resolve(__dirname),
       server: { middlewareMode: true },
       appType: "spa",
     });

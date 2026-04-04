@@ -1,13 +1,19 @@
-
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { SniffResult, Deal } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const GEMINI_MODEL = "gemini-2.5-flash";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export const sniffDeals = async (query: string): Promise<SniffResult> => {
+  if (!process.env.GEMINI_API_KEY?.trim()) {
+    throw new Error(
+      "GEMINI_API_KEY is missing. Copy .env.example to .env.local and add your key from Google AI Studio.",
+    );
+  }
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: GEMINI_MODEL,
       contents: `Search for the best internet deals, free trials, and discounts for: ${query}. 
       Focus on active offers and provide a summary of your findings.
       
