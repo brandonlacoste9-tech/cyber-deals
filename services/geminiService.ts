@@ -6,15 +6,21 @@ const DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions";
 const DEEPSEEK_MODEL = "deepseek-chat";
 
 export const sniffDeals = async (query: string): Promise<SniffResult> => {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.DEEPSEEK_API_KEY;
+  // Try multiple possible environment variable names for the API key
+  const apiKey = process.env.DEEPSEEK_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY;
   
+  console.log("[Cyberhound] Starting sniff for:", query);
+  console.log("[Cyberhound] API Key present:", !!apiKey);
+
   if (!apiKey?.trim()) {
+    console.error("[Cyberhound] API Key is missing! Check your environment variables.");
     throw new Error(
-      "API Key is missing. Please add your DeepSeek API key to .env.local as DEEPSEEK_API_KEY.",
+      "API Key is missing. Please add your DeepSeek API key to your environment variables as DEEPSEEK_API_KEY.",
     );
   }
 
   try {
+    console.log("[Cyberhound] Sending request to DeepSeek API...");
     const response = await fetch(DEEPSEEK_API_URL, {
       method: "POST",
       headers: {
@@ -51,13 +57,15 @@ export const sniffDeals = async (query: string): Promise<SniffResult> => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.error("[Cyberhound] API Error Response:", errorData);
       throw new Error(errorData.error?.message || `DeepSeek API error: ${response.statusText}`);
     }
 
     const data = await response.json();
     const text = data.choices[0]?.message?.content || "I couldn't sniff out anything specific right now. Bark!";
+    console.log("[Cyberhound] API Response received successfully.");
     
-    // DeepSeek doesn't have the same grounding metadata as Gemini, so we'll leave sources empty or extract from text if needed
+    // DeepSeek doesn't have the same grounding metadata as Gemini
     const sources: any[] = [];
 
     // Robust extraction using regular expressions
@@ -100,13 +108,15 @@ export const sniffDeals = async (query: string): Promise<SniffResult> => {
       }
     }
     
+    console.log(`[Cyberhound] Extracted ${deals.length} deals.`);
+    
     return {
       text,
       deals,
       sources
     };
   } catch (error) {
-    console.error("Sniffing error:", error);
+    console.error("[Cyberhound] Sniffing error:", error);
     throw error;
   }
 };
