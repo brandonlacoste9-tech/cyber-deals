@@ -1,43 +1,64 @@
-import { GoogleGenAI } from "@google/genai";
+
 import { SniffResult, Deal } from "../types";
 
-const GEMINI_MODEL = "gemini-2.5-flash";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+// DeepSeek is OpenAI-compatible
+const DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions";
+const DEEPSEEK_MODEL = "deepseek-chat";
 
 export const sniffDeals = async (query: string): Promise<SniffResult> => {
-  if (!process.env.GEMINI_API_KEY?.trim()) {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.DEEPSEEK_API_KEY;
+  
+  if (!apiKey?.trim()) {
     throw new Error(
-      "GEMINI_API_KEY is missing. Copy .env.example to .env.local and add your key from Google AI Studio.",
+      "API Key is missing. Please add your DeepSeek API key to .env.local as DEEPSEEK_API_KEY.",
     );
   }
+
   try {
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: `Search for the best internet deals, free trials, and discounts for: ${query}. 
-      Focus on active offers and provide a summary of your findings.
-      
-      CRITICAL: For each specific deal you find, you MUST also provide its details in this EXACT structured format at the end of your response:
-      
-      ---DEAL_START---
-      TITLE: [Deal Title]
-      DESCRIPTION: [Short description of the deal]
-      CATEGORY: [Must be exactly one of: Free Trial, Discount, Coupon, Limited Time]
-      LINK: [Direct URL if found, otherwise a relevant search link]
-      SOURCE: [Website name]
-      SCORE: [Relevance score 0-100]
-      ---DEAL_END---`,
-      config: {
-        tools: [{ googleSearch: {} }],
+    const response = await fetch(DEEPSEEK_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
       },
+      body: JSON.stringify({
+        model: DEEPSEEK_MODEL,
+        messages: [
+          {
+            role: "system",
+            content: "You are Cyberhound, an AI that sniffs out the best internet deals, free trials, and discounts. Search for active offers and provide a summary. You MUST provide structured deal data at the end of your response."
+          },
+          {
+            role: "user",
+            content: `Search for the best internet deals, free trials, and discounts for: ${query}. 
+            Focus on active offers and provide a summary of your findings.
+            
+            CRITICAL: For each specific deal you find, you MUST also provide its details in this EXACT structured format at the end of your response:
+            
+            ---DEAL_START---
+            TITLE: [Deal Title]
+            DESCRIPTION: [Short description of the deal]
+            CATEGORY: [Must be exactly one of: Free Trial, Discount, Coupon, Limited Time]
+            LINK: [Direct URL if found, otherwise a relevant search link]
+            SOURCE: [Website name]
+            SCORE: [Relevance score 0-100]
+            ---DEAL_END---`
+          }
+        ],
+        temperature: 0.7,
+      }),
     });
 
-    const text = response.text || "I couldn't sniff out anything specific right now. Bark!";
-    const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
-    const sources = groundingMetadata?.groundingChunks?.map((chunk: any) => ({
-      title: chunk.web?.title || "Source",
-      uri: chunk.web?.uri || "#"
-    })) || [];
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `DeepSeek API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const text = data.choices[0]?.message?.content || "I couldn't sniff out anything specific right now. Bark!";
+    
+    // DeepSeek doesn't have the same grounding metadata as Gemini, so we'll leave sources empty or extract from text if needed
+    const sources: any[] = [];
 
     // Robust extraction using regular expressions
     const deals: Deal[] = [];
