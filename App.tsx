@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { CyberhoundMascot } from './components/CyberhoundMascot';
 import { SearchInterface } from './components/SearchInterface';
 import { ResultDisplay } from './components/ResultDisplay';
+import { ClawMachine } from './components/ClawMachine';
 import { sniffDeals } from './services/geminiService';
-import { SniffResult, HoundMood } from './types';
+import { SniffResult, HoundMood, Deal } from './types';
 import { Ghost, ShieldAlert, Zap, History, Sparkles, LogIn, LogOut, User as UserIcon, Crown, CreditCard } from 'lucide-react';
 import { auth, signInWithGoogle, logout, db, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -23,6 +24,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
+  const [isClawOpen, setIsClawOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -93,12 +95,8 @@ const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.uid, email: user.email }),
       });
-      const data = await response.json();
-      if (!response.ok) {
-        setError(data.error || 'Checkout is unavailable. Configure Stripe or try again later.');
-        return;
-      }
-      if (data.url) window.location.href = data.url;
+      const { url } = await response.json();
+      if (url) window.location.href = url;
     } catch (err) {
       console.error("Upgrade error:", err);
       setError("Payment system offline. Try again later.");
@@ -149,9 +147,7 @@ const App: React.FC = () => {
         searchCount: (currentSearchCount || 0) + 1
       });
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "The trail went cold... (API Error)",
-      );
+      setError("The trail went cold... (API Error)");
       setMood(HoundMood.TIRED);
     } finally {
       setIsLoading(false);
@@ -161,6 +157,16 @@ const App: React.FC = () => {
   const handleAction = () => {
     setMood(HoundMood.EXCITED);
     setTimeout(() => setMood(HoundMood.HAPPY), 2000);
+  };
+
+  const handleClawWin = (deal: Deal) => {
+    setResult({
+      text: `JACKPOT! The Cyber-Claw has retrieved an exclusive deal just for you. Neural scent confirmed: ${deal.title}.`,
+      deals: [deal],
+      sources: [{ title: deal.source, uri: deal.link }]
+    });
+    setMood(HoundMood.EXCITED);
+    setIsClawOpen(false);
   };
 
   return (
@@ -308,6 +314,23 @@ const App: React.FC = () => {
           <a href="#" className="hover:text-cyan-400 transition-colors">Scent Protocol</a>
         </div>
       </footer>
+
+      {/* Claw Machine Trigger */}
+      <button 
+        onClick={() => setIsClawOpen(true)}
+        className="fixed bottom-8 right-8 z-40 bg-cyan-500 text-black p-4 rounded-2xl shadow-[0_0_30px_rgba(34,211,238,0.5)] hover:scale-110 hover:rotate-12 transition-all group"
+      >
+        <Zap size={24} className="group-hover:animate-pulse" />
+        <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce">
+          NEW
+        </div>
+      </button>
+
+      <ClawMachine 
+        isOpen={isClawOpen} 
+        onClose={() => setIsClawOpen(false)} 
+        onWin={handleClawWin} 
+      />
     </div>
   );
 };

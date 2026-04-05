@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Tag, Globe, CheckCircle2, BookmarkPlus, Copy, Check, Zap, Trash2, Filter, ArrowUpDown } from 'lucide-react';
+import { ExternalLink, Tag, Globe, CheckCircle2, BookmarkPlus, Copy, Check, Zap, Trash2, Filter, ArrowUpDown, Share2, Gift, Percent, Ticket, Clock } from 'lucide-react';
 import { SniffResult, Deal } from '../types';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy } from 'firebase/firestore';
@@ -44,6 +44,67 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onAction }
     setCopiedId(id);
     onAction?.();
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleShare = async (deal: Deal) => {
+    const shareData = {
+      title: `Cyberhound Deal: ${deal.title}`,
+      text: `Check out this deal I found on Cyberhound: ${deal.description}`,
+      url: deal.link,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback: Copy to clipboard and show alert
+        await navigator.clipboard.writeText(`${shareData.title}\n${shareData.url}`);
+        alert('Share link copied to clipboard!');
+      }
+      onAction?.();
+    } catch (err) {
+      console.error('Error sharing:', err);
+    }
+  };
+
+  const getCategoryStyle = (category: string) => {
+    switch (category) {
+      case 'Free Trial':
+        return {
+          icon: <Gift size={10} />,
+          bg: 'bg-emerald-900/40',
+          text: 'text-emerald-400',
+          border: 'border-emerald-800/30'
+        };
+      case 'Discount':
+        return {
+          icon: <Percent size={10} />,
+          bg: 'bg-blue-900/40',
+          text: 'text-blue-400',
+          border: 'border-blue-800/30'
+        };
+      case 'Coupon':
+        return {
+          icon: <Ticket size={10} />,
+          bg: 'bg-purple-900/40',
+          text: 'text-purple-400',
+          border: 'border-purple-800/30'
+        };
+      case 'Limited Time':
+        return {
+          icon: <Clock size={10} />,
+          bg: 'bg-rose-900/40',
+          text: 'text-rose-400',
+          border: 'border-rose-800/30'
+        };
+      default:
+        return {
+          icon: <Tag size={10} />,
+          bg: 'bg-cyan-900/40',
+          text: 'text-cyan-400',
+          border: 'border-cyan-800/30'
+        };
+    }
   };
 
   const toggleWatchlist = async (deal: Deal) => {
@@ -143,16 +204,21 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onAction }
                     className="bg-black/40 border border-cyan-900/30 rounded-2xl p-6 hover:border-cyan-500/50 transition-all group relative"
                   >
                     <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <span className="inline-block px-2 py-1 rounded-md bg-cyan-900/40 text-cyan-400 text-[10px] font-bold uppercase tracking-widest mb-2">
-                          {deal.category}
-                        </span>
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        {(() => {
+                          const style = getCategoryStyle(deal.category);
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md ${style.bg} ${style.text} text-[10px] font-bold uppercase tracking-widest border ${style.border}`}>
+                              {style.icon} {deal.category}
+                            </span>
+                          );
+                        })()}
                         {watchlist.some(item => item.id === deal.id) && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-cyan-500 text-black text-[10px] font-black uppercase tracking-widest mb-2 ml-2 animate-pulse">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-cyan-500 text-black text-[10px] font-black uppercase tracking-widest animate-pulse">
                             <BookmarkPlus size={10} /> WATCHING
                           </span>
                         )}
-                        <h4 className="text-lg font-bold text-white group-hover:text-cyan-300 transition-colors">
+                        <h4 className="text-lg font-bold text-white group-hover:text-cyan-300 transition-colors mt-2 w-full">
                           {deal.title}
                         </h4>
                       </div>
@@ -199,6 +265,15 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onAction }
                           <span className="hidden sm:inline">{copiedId === deal.id ? 'COPIED' : 'COPY'}</span>
                         </button>
 
+                        <button 
+                          onClick={() => handleShare(deal)}
+                          className="p-2 rounded-lg border border-cyan-900/50 text-cyan-600 hover:border-cyan-500 hover:text-cyan-400 transition-all flex items-center gap-2 text-xs font-bold"
+                          title="Share Deal"
+                        >
+                          <Share2 size={16} />
+                          <span className="hidden sm:inline">SHARE</span>
+                        </button>
+
                         <a 
                           href={deal.link}
                           target="_blank"
@@ -240,9 +315,14 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onAction }
                     className="bg-cyan-950/10 border border-cyan-900/20 rounded-xl p-4 hover:border-cyan-500/30 transition-all group"
                   >
                     <div className="flex justify-between items-start mb-2">
-                      <span className="text-[9px] font-bold text-cyan-600 uppercase tracking-tighter">
-                        {deal.category}
-                      </span>
+                      {(() => {
+                        const style = getCategoryStyle(deal.category);
+                        return (
+                          <span className={`flex items-center gap-1 text-[9px] font-bold ${style.text} uppercase tracking-tighter`}>
+                            {style.icon} {deal.category}
+                          </span>
+                        );
+                      })()}
                       <button 
                         onClick={() => toggleWatchlist(deal)}
                         className="text-gray-600 hover:text-red-500 transition-colors"

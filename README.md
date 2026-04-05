@@ -10,13 +10,11 @@ View your app in AI Studio: https://ai.studio/apps/fa08ac01-b4fc-4915-bcf3-988b7
 
 ## Run Locally
 
-**Prerequisites:** Node.js 20+
+**Prerequisites:**  Node.js
 
-1. Install dependencies: `npm install`
-2. Copy `.env.example` to `.env.local` and set **`GEMINI_API_KEY`** (from [Google AI Studio](https://aistudio.google.com/apikey)).
-3. Start the dev server (Express + Vite): `npm run dev`
-4. Open **http://localhost:3000**
 
-Optional: set **`STRIPE_SECRET_KEY`** and **`APP_URL`** in `.env.local` for “Go Pro” checkout. Without Stripe, checkout shows a clear message instead of failing silently.
-
-**Production:** `npm run build`, then run with `NODE_ENV=production` (for example PowerShell: `$env:NODE_ENV='production'; npm start`).
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`

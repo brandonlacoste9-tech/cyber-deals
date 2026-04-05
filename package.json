@@ -6,16 +6,15 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build",
-    "start": "tsx server.ts",
     "preview": "vite preview",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",
-    "dotenv": "^17.4.0",
     "express": "^5.2.1",
     "firebase": "^12.11.0",
     "lucide-react": "^0.562.0",
+    "motion": "^12.38.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "stripe": "^21.0.0",
